@@ -1,0 +1,40 @@
+[project]
+name = "biblically-accurate-sampler"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "nltk>=3.9.1",
+    "torch>=2.5.1",
+    "tqdm>=4.67.1",
+    "transformers>=4.46.3",
+]
+
+[project.optional-dependencies]
+cpu = ["torch>=2.5.1"]
+cu124 = ["torch>=2.5.1"]
+
+[tool.uv]
+conflicts = [
+  [
+    { extra = "cpu" },
+    { extra = "cu124" },
+  ],
+]
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cpu", extra = "cpu", marker = "platform_system != 'Darwin'" },
+  { index = "pytorch-cu124", extra = "cu124" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
