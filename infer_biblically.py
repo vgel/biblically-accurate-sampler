@@ -46,7 +46,7 @@ def generate(
     token_trie: TokenTrie,
     can_end_word: set[int],
 ):
-    tokens = torch.tensor([inp[:]]).to(model.device)
+    tokens = torch.tensor([inp]).to(model.device)
     kv = DynamicCache()
     tt_ptr = token_trie
     for _ in range(max_new_tokens):
@@ -54,18 +54,28 @@ def generate(
         logits = out.logits[:, -1, :].squeeze().cpu()
         options = [t.item() for t in torch.argsort(logits, descending=True)]
         kv = out.past_key_values
+
         for token in options:
             if tt_ptr.get(token):
                 tt_ptr = tt_ptr.get(token)
                 break
-            elif tt_ptr.is_terminal and token_trie.is_leading_space_tok(token):
+
+            # only allow starting a new word, punctuation, or ending the message
+            # if we're not in the middle of a word. we need to check both
+            # is_terminal *or* if we're currently at the root, because we want
+            # to allow e.g <|eot_id|> after a period
+            if not (tt_ptr.is_terminal or tt_ptr is token_trie):
+                continue
+
+            if token_trie.is_leading_space_tok(token):
                 tt_ptr = token_trie.get(token)
                 break
-            elif tt_ptr.is_terminal and token in can_end_word:
+            elif token in can_end_word:
                 tt_ptr = token_trie
                 break
-            elif tt_ptr.is_terminal and token in model.config.eos_token_id:
+            elif token in model.config.eos_token_id:
                 return
+
         tokens = torch.tensor([[token]]).to(tokens.device)
         yield tokenizer.decode([token])
 
